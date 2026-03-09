@@ -16,6 +16,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -491,7 +492,7 @@ class Enemy {
         // Draw enemy mouth
         gc.setStroke(Color.web("#0a0e27"));
         gc.setLineWidth(2);
-        gc.strokeArc(renderX + 32, renderY - 10, 16, 10, 0, 180, false);
+        gc.strokeArc(renderX + 32, renderY - 10, 16, 10, 0, 180, ArcType.OPEN);
 
         // Draw hit indicator
         if (isHit) {
