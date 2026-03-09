@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Conqueror</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Georgia', serif; background: #0a0a0a; color: #fff; overflow: hidden; }
+        #game { width: 100vw; height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+
+        /* TITLE SCREEN */
+        #title { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 100%); }
+        #title.hidden { display: none; }
+        .title-box { text-align: center; animation: fadeIn 1s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .game-title { font-size: 80px; font-weight: bold; background: linear-gradient(135deg, #00ff88, #00aaff, #ff0055); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 50px; letter-spacing: 4px; }
+        .title-subtitle { font-size: 20px; color: #aaa; margin-bottom: 60px; letter-spacing: 2px; }
+        .difficulty-group { display: flex; gap: 40px; justify-content: center; margin-bottom: 50px; }
+        .difficulty-box { text-align: center; }
+        .diff-btn { padding: 18px 45px; font-size: 16px; font-weight: bold; border: 3px solid; border-radius: 6px; background: rgba(0,0,0,0.5); cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 2px; pointer-events: auto; }
+        .diff-btn.normal { border-color: #00ff88; color: #00ff88; }
+        .diff-btn.normal:hover, .diff-btn.normal.active { background: rgba(0,255,136,0.2); box-shadow: 0 0 30px rgba(0,255,136,0.6); }
+        .diff-btn.hard { border-color: #ff0055; color: #ff0055; }
+        .diff-btn.hard:hover, .diff-btn.hard.active { background: rgba(255,0,85,0.2); box-shadow: 0 0 30px rgba(255,0,85,0.6); }
+        .diff-label { font-size: 12px; color: #888; margin-top: 8px; }
+        .start-btn { padding: 15px 60px; font-size: 18px; font-weight: bold; background: linear-gradient(135deg, #00ff88, #00cc66); color: #000; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 2px; pointer-events: auto; }
+        .start-btn:hover:not(:disabled) { box-shadow: 0 0 40px rgba(0,255,136,0.8); transform: scale(1.05); }
+        .start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* DIALOGUE SCREEN */
+        #dialogue { flex: 1; display: none; background: linear-gradient(180deg, #0f0f1e 0%, #1a0a2e 100%); position: relative; padding: 60px; }
+        #dialogue.active { display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .honour-display { position: absolute; top: 20px; right: 40px; background: rgba(0,0,0,0.8); border: 2px solid #00aaff; border-radius: 6px; padding: 12px 20px; font-size: 13px; color: #00aaff; }
+        .honour-bar { width: 150px; height: 16px; background: rgba(0,0,0,0.6); border: 1px solid #666; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+        .honour-fill { height: 100%; background: linear-gradient(90deg, #ff0055, #ffaa00, #00ff88); width: 50%; transition: width 0.3s; }
+
+        .scene-title { font-size: 28px; color: #00ff88; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 40px; text-shadow: 0 0 20px rgba(0,255,136,0.3); }
+        
+        .dialogue-box { flex: 1; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.6); border: 2px solid rgba(0,255,136,0.3); border-radius: 8px; padding: 40px; margin-bottom: 40px; min-height: 300px; }
+        .speaker-name { font-size: 16px; color: #00aaff; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .dialogue-text { font-size: 18px; line-height: 1.8; color: #e0e0e0; min-height: 80px; }
+
+        .choices-box { display: flex; gap: 15px; flex-wrap: wrap; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+        .choices-box.show { opacity: 1; pointer-events: auto; }
+        .choice-btn { flex: 1; min-width: 250px; padding: 15px 25px; background: rgba(0,255,136,0.15); border: 2px solid #00ff88; color: #00ff88; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
+        .choice-btn:hover { background: rgba(0,255,136,0.35); box-shadow: 0 0 20px rgba(0,255,136,0.5); transform: translateY(-2px); }
+        .choice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .skip-prompt { position: absolute; bottom: 20px; right: 20px; font-size: 12px; color: #666; }
+
+        /* COMBAT SCREEN */
+        #combat { flex: 1; display: none; background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%); position: relative; overflow: hidden; }
+        #combat.active { display: flex; }
+        
+        .char-box { position: absolute; text-align: center; }
+        .player-box { bottom: 80px; left: 60px; }
+        .enemy-box { top: 60px; right: 60px; }
+        .char-icon { font-size: 70px; margin-bottom: 8px; }
+        .char-name { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
+        .hp-bar { width: 200px; height: 20px; background: rgba(0,0,0,0.8); border: 2px solid #666; border-radius: 3px; overflow: hidden; }
+        .hp-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #00cc66); width: 100%; transition: width 0.3s; }
+        .hp-text { font-size: 11px; text-align: center; padding-top: 2px; color: #fff; }
+
+        .battle-log { position: absolute; top: 20px; left: 20px; width: 320px; max-height: 280px; background: rgba(0,0,0,0.85); border: 2px solid #666; border-radius: 6px; padding: 10px; overflow-y: auto; font-size: 12px; color: #aaa; }
+        .log-entry { margin: 4px 0; }
+        .log-entry.hit { color: #00ff88; }
+        .log-entry.damage { color: #ff3333; }
+        .log-entry.parry { color: #ffdd00; }
+
+        .action-prompt { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); border: 2px solid #00aaff; border-radius: 6px; padding: 12px 30px; font-size: 16px; font-weight: bold; color: #00aaff; text-align: center; min-width: 350px; z-index: 50; box-shadow: 0 0 20px rgba(0,170,255,0.5); display: none; animation: slideDown 0.3s; }
+        .action-prompt.show { display: block; }
+        @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+        .qte-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; }
+        .qte-box.active { display: flex; flex-direction: column; align-items: center; gap: 25px; }
+        .qte-key { font-size: 140px; font-weight: bold; color: #ffdd00; text-shadow: 0 0 40px rgba(255,221,0,0.9); animation: pulse 0.2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .qte-timer { width: 450px; height: 45px; background: rgba(0,0,0,0.9); border: 4px solid #ffdd00; border-radius: 6px; overflow: hidden; }
+        .qte-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #ffdd00); width: 100%; transition: width 0.05s linear; }
+        .qte-count { font-size: 50px; font-weight: bold; color: #00ff88; text-shadow: 0 0 15px rgba(0,255,136,0.9); }
+
+        .parry-bar { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 0; height: 0; display: none; z-index: 25; }
+        .parry-bar.active { display: block; }
+        .parry-container { width: 500px; height: 80px; background: rgba(0,0,0,0.9); border: 4px solid #ffdd00; border-radius: 8px; position: relative; overflow: hidden; box-shadow: 0 0 30px rgba(255,221,0,0.6); }
+        .parry-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ff0055, #ffaa00, #ffdd00, #00ff88); transition: width 0.1s linear; }
+        .parry-green { position: absolute; left: 50%; top: 0; width: 25%; height: 100%; background: rgba(0,255,136,0.3); border-left: 3px solid #00ff88; border-right: 3px solid #00ff88; transform: translateX(-50%); }
+        .parry-label { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: bold; color: #ffdd00; white-space: nowrap; text-shadow: 0 0 10px rgba(255,221,0,0.8); }
+
+        .combat-status { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 56px; font-weight: bold; text-align: center; z-index: 20; pointer-events: none; text-shadow: 0 0 50px rgba(0,0,0,0.9); animation: statusPop 2s ease-out forwards; }
+        .combat-status.action { color: #00ff88; }
+        .combat-status.enemy { color: #ff0055; }
+        .combat-status.parry { color: #ffdd00; }
+        .combat-status.combo { color: #ffaa00; }
+        @keyframes statusPop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 10% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); } 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); } }
+
+        .controls { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); text-align: center; color: #00ff88; font-size: 15px; font-weight: bold; background: rgba(0,0,0,0.8); border: 2px solid #00ff88; border-radius: 6px; padding: 15px 30px; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+        .controls div { margin: 6px 0; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <div id="game" style="display: flex; flex-direction: column;">
+        <!-- TITLE SCREEN -->
+        <div id="title">
+            <div class="title-box">
+                <div class="game-title">THE CONQUEROR</div>
+                <div class="title-subtitle">A Story of Ambition and Betrayal</div>
+                <div class="difficulty-group">
+                    <div class="difficulty-box">
+                        <button class="diff-btn normal" onclick="selectDifficulty('normal')">NORMAL</button>
+                        <div class="diff-label">Balanced Challenge</div>
+                    </div>
+                    <div class="difficulty-box">
+                        <button class="diff-btn hard" onclick="selectDifficulty('hard')">HARD</button>
+                        <div class="diff-label">Punishing Difficulty</div>
+                    </div>
+                </div>
+                <button class="start-btn" id="startBtn" disabled onclick="startGame()">START GAME</button>
+            </div>
+        </div>
+
+        <!-- DIALOGUE SCREEN -->
+        <div id="dialogue">
+            <div class="honour-display">
+                <div>HONOUR: <span id="honourValue">50</span>/100</div>
+                <div class="honour-bar"><div class="honour-fill" id="honourFill" style="width: 50%"></div></div>
+            </div>
+            <div>
+                <div class="scene-title" id="sceneTitle"></div>
+                <div class="dialogue-box">
+                    <div class="speaker-name" id="speakerName"></div>
+                    <div class="dialogue-text" id="dialogueText"></div>
+                </div>
+            </div>
+            <div class="choices-box" id="choicesBox"></div>
+            <div class="skip-prompt">Click or Press SPACE to continue</div>
+        </div>
+
+        <!-- COMBAT SCREEN -->
+        <div id="combat">
+            <div class="action-prompt" id="actionPrompt"></div>
+            <div class="battle-log" id="battleLog"></div>
+
+            <div class="char-box player-box">
+                <canvas id="playerCanvas" width="200" height="200" style="display: block; margin: 0 auto 8px; image-rendering: pixelated; background: #222; border: 2px solid #666;"></canvas>
+                <div class="char-name">Conqueror</div>
+                <div class="hp-bar"><div class="hp-fill" id="playerHpFill" style="width: 100%"></div></div>
+                <div class="hp-text" id="playerHpText">400/400</div>
+            </div>
+
+            <div class="char-box enemy-box">
+                <div class="char-icon" id="enemyIcon">👤</div>
+                <div class="char-name" id="enemyName">Enemy</div>
+                <div class="hp-bar"><div class="hp-fill" id="enemyHpFill" style="width: 100%"></div></div>
+                <div class="hp-text" id="enemyHpText">350/350</div>
+            </div>
+
+            <div class="qte-box" id="qteBox">
+                <div class="qte-key" id="qteKey">Q</div>
+                <div class="qte-timer"><div class="qte-fill" id="qteFill" style="width: 100%"></div></div>
+                <div class="qte-count" id="qteCount">x0</div>
+            </div>
+
+            <div class="parry-bar" id="parryBar">
+                <div class="parry-label">HOLD TAB TO PARRY</div>
+                <div class="parry-container">
+                    <div class="parry-green"></div>
+                    <div class="parry-fill" id="parryFill"></div>
+                </div>
+            </div>
+
+            <div class="combat-status" id="combatStatus"></div>
+
+            <div class="controls">
+                <div><strong>Q</strong> = Start attack | Press the highlighted keys to continue combo</div>
+                <div><strong>SPACE</strong> = Finish combo | <strong>E</strong> = Assist (evade) | <strong>TAB (HOLD)</strong> = Parry</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== GAME STATE =====
+        let gameState = {
+            difficulty: 'normal',
+            honour: 50,
+            inCombat: false,
+            playerTurnsDefending: false,
+            comboCount: 0,
+            assistCooldown: 0,
+            assistMaxCooldown: 2,
+            parryFailurePenalty: 0,
+            player: { hp: 400, maxHp: 400 },
+            enemy: { hp: 350, maxHp: 350, name: 'Enemy' },
+            combatLog: [],
+        };
+
+        let dialogueState = {
+            currentScene: null,
+            currentLineIndex: 0,
+            isReading: false,
+        };
+
+        let rhythmState = {
+            active: false,
+            comboCount: 0,
+            nextKey: null,
+            timer: null,
+            timeLeft: 0,
+            maxTime: 2000,
+            speed: 2000,
+        };
+
+        let parryState = {
+            holding: false,
+            fillAmount: 0,
+            parryTimer: null,
+        };
+
+        // ===== PLAYER SPRITES =====
+        const PLAYER_SPRITES = {
+            'south': 'data:image/png;base64,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',
+            'east': 'data:image/png;base64,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',
+            'north': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAIAAAAn5KxJAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAHOklEQVR4nO1ZS28U2RU+91W3Xl1ddksYGTE22NN+4EmEGDILpBkmEJQoG/gLaDTrZEE2sCKECA2ZyZ6EgDTzC5hsgH3kLFAAG4xhkKJYMIj2GJl+1X1mcewOURSJatpkpPhTqVV9deueU98599zvdANsYxvb+P8CGdxS9L+Muy1d/XuHgThKAaiUklL66ggBNojFNzCQ0P/rbRljSZJQwtfX193HoLtBRf/NQQEo58Hly1c++vDIHy5dufKnrz768GglHQbgg8qugTE6PT29tLT0s5/+PI7jJ0+ejoyMXLt27f33D8z/9S8DYXRgm2kor6VJ5j2sr79M01QpFcdxtVod1PoDY3Qorx05cmR5+eHu3buttc+fP0+SZGHh7ndrje8Xo6Ojo7du3Tp27NidO3eePHkyNzfXaHw3NDQ8qPUHxujk5KQMImstY6zd7nDOgyAoiu6jb5b/N4xireScAgBjDAAI8ZxTzqk2BWWgdFcIHgRCa0Wox4ekjLA44EUp33JHnQMphbWOMWKtDYLAe2+MIYTgiJRShsI6zTihlOIpYK3dfE+apmlZo9BH6KMo6nQ6AMAYQ/NCSPR1YmKCUuqcI8A458aYR088IsQzxowxaZp2Op2ex2/jFOCcA0AYhgCQJAkhDIAyJrDsU8o5CwMRA3BKAhzEOfgZxynnQVmjpRklhAkhvPdaayGE1hqAxlGMNM/NzbVaLUppkiR37y44b4VgWmsASNO02WwCALL+FhilyAreBEEIwPH68cfHONv4Knj08eFjeJ/nw5VKFVnHXRWGcVmrpXcfAIQybre7jArr7K/P/ubevXtSyi+//MoYe/ToTwghAOC9bzabgotDhw7tnRjftWvX+fPnGWNFUTDGut1uWaN9FHzaLbqMMinlF59/kWXZ/Pz806dPtdbDw8Naa++9970kSZrNJg26u79+BltOAABYHbEbeW/uh8YYpZT3fmhoqNFohGEohGi12kJw67QQYmVlpdlsvolYLs1or55zzpHXVvulsSpJEmNMu91eWVl5sPwgDEPGKKUUJQFqezyQUECVRekQYPtRqVRevnyJto8fP97tdqMwkVJev37dOssZ379/v/e+VqsVqpNl2dmzZ1Ee4OPY+vXhbp+glANQbDMAaBQlAJxRyagE4DJIsI4KIXECqpP+bPUTBZQXxpheozwzM8MY01o/ePCwN22qPsU5B+IWFxellFpr5wy80meXQukcJYRgswEA1mpjFAD0hD2lwBjhnDK20QhgRuLOwxX6I7W8wt9w0fZMZlnWaDSccziIEgkAtNbW2larVavVYDMOON6Ho6XR05So9xCEECkjzgP8XQmPLkq5EDJNs/8UIm9Dj1prkdQkSTjnWZYBwIEDB8bHxzHK2DPh5LGxsfHxcQCo1WqEkN4fEm9DjxJC8FxZW1szxuCxSSndsWMHxlQIgROcczt37iSExHG8urqKPbSU8t//P3ld9PMDBDrkvRdCOOdOnjzZarWq1aH5+XmlVC8FpZQHDx4MwzBJkjNnzkgpi6LTY70Pu9vYxja2sY03wD8BAzhXIRHuOCUAAAAASUVORK5CYII=',
+            'west': 'data:image/png;base64,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',
+        };
+
+        // ===== PLAYER SPRITE DRAWING =====
+        function drawPlayerSprite(direction = 'south') {
+            const canvas = document.getElementById('playerCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const spriteUri = PLAYER_SPRITES[direction];
+            if (!spriteUri) return;
+            
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.onerror = () => {
+                console.error('Failed to load sprite:', direction);
+            };
+            img.src = spriteUri;
+        }
+
+        // ===== DIFFICULTY SELECTION =====
+        function selectDifficulty(diff) {
+            gameState.difficulty = diff;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            if (diff === 'normal') {
+                document.querySelector('.diff-btn.normal').classList.add('active');
+            } else {
+                document.querySelector('.diff-btn.hard').classList.add('active');
+            }
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        function startGame() {
+            document.getElementById('title').classList.add('hidden');
+            document.getElementById('dialogue').classList.add('active');
+            showScene('campaign-start');
+        }
+
+        // ===== DIALOGUE SYSTEM =====
+        const scenes = {
+            'campaign-start': {
+                title: 'ACT ONE: THE CAMPAIGN',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'You are the Conqueror, general of the Kingdom of Marie.' },
+                    { speaker: 'NARRATOR', text: 'For months you have led a campaign across the continent, expanding Marie\'s borders.' },
+                    { speaker: 'NARRATOR', text: 'Tonight, your final battle awaits—the enemy general, last of the foreign resistance.' },
+                    { speaker: 'NARRATOR', text: 'Defeat them, and victory is yours.' }
+                ],
+                choices: [{ text: 'BEGIN BATTLE', next: 'campaign-combat' }]
+            },
+            'campaign-combat': { combat: { player: 400, enemy: 350, name: 'Enemy General', next: 'campaign-victory-choice' } },
+            'campaign-victory-choice': {
+                title: 'VICTORY - THE CHOICE',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'The Enemy General falls to your blade and collapses at your feet.' },
+                    { speaker: 'NARRATOR', text: 'He is wounded, defeated, but alive.' },
+                    { speaker: 'SOLDIER', text: 'General, what shall we do with him?' }
+                ],
+                choices: [
+                    { text: 'Execute him - remove the threat', next: 'campaign-victory-kill', honourChange: -15 },
+                    { text: 'Spare him - imprison for ransom', next: 'campaign-victory-mercy', honourChange: +15 }
+                ]
+            },
+            'campaign-victory-kill': {
+                title: 'VICTORY',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'The Enemy General\'s body lies cold on the field.' },
+                    { speaker: 'NARRATOR', text: 'Your army cheers. The foreign lands are conquered through blood and iron.' },
+                    { speaker: 'NARRATOR', text: 'With the campaign complete, you return to Marie.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'palace-night' }]
+            },
+            'campaign-victory-mercy': {
+                title: 'VICTORY',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'The Enemy General lives, imprisoned in chains.' },
+                    { speaker: 'NARRATOR', text: 'Your army respects the decision—victory without unnecessary bloodshed.' },
+                    { speaker: 'NARRATOR', text: 'With the campaign complete, you return to Marie.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'palace-night' }]
+            },
+            'palace-night': {
+                title: 'THE PALACE - NIGHT',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'The throne room is dark and empty except for the King.' },
+                    { speaker: 'NARRATOR', text: 'He sits upon his throne, watching you approach. His expression is cold.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'palace-dialogue' }]
+            },
+            'palace-dialogue': {
+                title: 'THE KING',
+                lines: [
+                    { speaker: 'KING', text: '"You have served Marie well, General. Your victories are beyond question."' },
+                    { speaker: 'CONQUEROR', text: '"I have done what you asked, my lord. The continent bows to Marie."' },
+                    { speaker: 'KING', text: '"Indeed. And that is precisely why you must die."' }
+                ],
+                choices: [
+                    { text: 'Deny responsibility - blame the King', next: 'escape-setup', honourChange: -15 },
+                    { text: 'Accept your role with dignity', next: 'escape-setup', honourChange: +15 }
+                ]
+            },
+            'escape-setup': {
+                title: 'ESCAPE',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'Royal guards flood into the throne room.' },
+                    { speaker: 'NARRATOR', text: 'You are outnumbered ten to one.' },
+                    { speaker: 'NARRATOR', text: 'There is only one choice: flee.' },
+                    { speaker: 'NARRATOR', text: 'You burst through the palace gates and mount a horse.' },
+                    { speaker: 'NARRATOR', text: 'As you escape into the night, you see a familiar figure ahead—the Prince.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'prince-meeting' }]
+            },
+            'prince-meeting': {
+                title: 'THE PRINCE',
+                lines: [
+                    { speaker: 'PRINCE', text: '"Conqueror? Why are you fleeing?"' },
+                    { speaker: 'CONQUEROR', text: '"Your father has betrayed me. He ordered my death."' },
+                    { speaker: 'PRINCE', text: '"I believe you. I\'m coming with you."' }
+                ],
+                choices: [
+                    { text: 'Use him for power - coldly accept his help', next: 'highlands', honourChange: -20 },
+                    { text: 'Try to protect his future', next: 'highlands', honourChange: +20 }
+                ]
+            },
+            'highlands': {
+                title: 'THE HIGHLANDS',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'For weeks you ride across the continent with the Prince.' },
+                    { speaker: 'NARRATOR', text: 'You arrive in the Highlands, a harsh land of mountains and strong warriors.' },
+                    { speaker: 'NARRATOR', text: 'You begin helping the Highland people. They respect power, and you have it in abundance.' },
+                    { speaker: 'NARRATOR', text: 'Soon, you meet a skilled warrior named Lyra.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'missions' }]
+            },
+            'missions': {
+                title: 'MISSIONS IN THE HIGHLANDS',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'Months pass. You fight alongside the Prince and Lyra.' },
+                    { speaker: 'NARRATOR', text: 'Victory after victory. The Prince bonds with Lyra.' },
+                    { speaker: 'NARRATOR', text: 'But you begin to notice something troubling about her knowledge.' },
+                    { speaker: 'NARRATOR', text: 'She knows too much about Marie\'s military.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'mission-bandit-camp' }]
+            },
+            'mission-bandit-camp': {
+                title: 'MISSION: BANDIT CAMP',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'You lead the Prince and Lyra to assault a bandit stronghold.' },
+                    { speaker: 'PRINCE', text: '"We move in quickly and take the camp."' },
+                    { speaker: 'LYRA', text: '"I\'ll cover our flank."' },
+                    { speaker: 'NARRATOR', text: 'The battle is brief. Your army overwhelms the bandits.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'mission-bridge' }]
+            },
+            'mission-bridge': {
+                title: 'MISSION: BRIDGE DEFENSE',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'You defend a critical mountain pass.' },
+                    { speaker: 'NARRATOR', text: 'Lyra fights with skill and precision.' },
+                    { speaker: 'LYRA', text: '"We\'ve held them! They\'re retreating!"' },
+                    { speaker: 'NARRATOR', text: 'Victory after victory. The Highlands grow restless under your rule.' },
+                    { speaker: 'NARRATOR', text: 'One night in a tavern, everything changes.' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'bar-reveal' }]
+            },
+            'bar-reveal': {
+                title: 'THE BAR - THE REVELATION',
+                lines: [
+                    { speaker: 'LYRA', text: '"Your victories are impressive. But Marie has begun analyzing your patterns through their Tactical Contingency Protocol."' },
+                    { speaker: 'PRINCE', text: '"What did you just say?"' },
+                    { speaker: 'CONQUEROR', text: '"You\'re one of them. A general of Marie."' },
+                    { speaker: 'LYRA', text: '"I was sent to observe you... but I didn\'t expect to care about either of you."' }
+                ],
+                choices: [{ text: 'CONTINUE', next: 'bar-combat-setup' }]
+            },
+            'bar-combat-setup': {
+                title: 'THE BAR - CONFRONTATION',
+                lines: [
+                    { speaker: 'CONQUEROR', text: '"Then you shouldn\'t have come here."' },
+                    { speaker: 'LYRA', text: '"I know. But I won\'t make this easy on you. Not because I hate you... because I respect you."' }
+                ],
+                choices: [{ text: 'FIGHT', next: 'bar-combat' }]
+            },
+            'bar-combat': { combat: { player: 400, enemy: 300, name: 'Lyra', next: 'bar-aftermath-choice' } },
+            'bar-aftermath-choice': {
+                title: 'AFTERMATH - THE MOMENT',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'Lyra lies defeated at your feet, breathing heavily.' },
+                    { speaker: 'NARRATOR', text: 'Blood drips from your blade.' },
+                    { speaker: 'LYRA', text: '"...finish it. Please."' }
+                ],
+                choices: [
+                    { text: 'Kill her - end the threat permanently', next: 'bar-aftermath-kill', honourChange: -30 },
+                    { text: 'Spare her - let her live with her failure', next: 'bar-aftermath-spare', honourChange: +25 }
+                ]
+            },
+            'bar-aftermath-kill': {
+                title: 'AFTERMATH - HUNGER',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'Your blade falls.' },
+                    { speaker: 'NARRATOR', text: 'Lyra is gone.' },
+                    { speaker: 'NARRATOR', text: 'The Prince looks at you with an expression that has changed forever.' },
+                    { speaker: 'NARRATOR', text: 'For the first time, the Prince sees something in your eyes that frightens him.' },
+                    { speaker: 'NARRATOR', text: 'Not justice. Not righteous anger.' },
+                    { speaker: 'NARRATOR', text: 'Hunger.' },
+                    { speaker: 'PRINCE', text: '"What are you becoming?"' }
+                ],
+                choices: [{ text: 'END OF ACT ONE', next: null }]
+            },
+            'bar-aftermath-spare': {
+                title: 'AFTERMATH - MERCY',
+                lines: [
+                    { speaker: 'NARRATOR', text: 'You lower your blade.' },
+                    { speaker: 'CONQUEROR', text: '"Go. Leave these lands and never return."' },
+                    { speaker: 'LYRA', text: '"Thank you."' },
+                    { speaker: 'NARRATOR', text: 'She limps away, disappearing into the night.' },
+                    { speaker: 'PRINCE', text: '"You\'re stronger than I thought. Not because you can kill... because you chose not to."' }
+                ],
+                choices: [{ text: 'END OF ACT ONE', next: null }]
+            }
+        };
+
+        function showScene(sceneKey) {
+            if (!sceneKey) {
+                document.getElementById('dialogue').classList.remove('active');
+                return;
+            }
+
+            const scene = scenes[sceneKey];
+            if (!scene) return;
+
+            if (scene.combat) {
+                startCombatScene(scene.combat);
+                return;
+            }
+
+            dialogueState.currentScene = sceneKey;
+            dialogueState.currentLineIndex = 0;
+
+            document.getElementById('sceneTitle').textContent = scene.title;
+            document.getElementById('choicesBox').innerHTML = '';
+            document.getElementById('choicesBox').classList.remove('show');
+
+            updateHonourDisplay();
+            playNextLine();
+        }
+
+        function playNextLine() {
+            const scene = scenes[dialogueState.currentScene];
+            if (!scene || !scene.lines) return;
+
+            if (dialogueState.currentLineIndex >= scene.lines.length) {
+                showChoices(scene.choices);
+                return;
+            }
+
+            const line = scene.lines[dialogueState.currentLineIndex];
+            document.getElementById('speakerName').textContent = line.speaker;
+            document.getElementById('dialogueText').textContent = line.text;
+
+            dialogueState.currentLineIndex++;
+        }
+
+        function showChoices(choices) {
+            const choicesBox = document.getElementById('choicesBox');
+            choicesBox.innerHTML = '';
+            choicesBox.classList.add('show');
+
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = choice.text;
+                btn.onclick = () => {
+                    if (choice.honourChange) {
+                        gameState.honour = Math.max(0, Math.min(100, gameState.honour + choice.honourChange));
+                    }
+                    showScene(choice.next);
+                };
+                choicesBox.appendChild(btn);
+            });
+        }
+
+        function updateHonourDisplay() {
+            const percent = (gameState.honour / 100) * 100;
+            document.getElementById('honourValue').textContent = gameState.honour;
+            document.getElementById('honourFill').style.width = percent + '%';
+        }
+
+        // Continue to next line on click or space
+        document.addEventListener('click', () => {
+            if (document.getElementById('dialogue').classList.contains('active')) {
+                playNextLine();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' && document.getElementById('dialogue').classList.contains('active')) {
+                e.preventDefault();
+                playNextLine();
+            }
+        });
+
+        // ===== COMBAT SYSTEM =====
+        function startCombatScene(config) {
+            gameState.inCombat = true;
+            gameState.playerTurnsDefending = false;
+            gameState.player.hp = 400;
+            gameState.player.maxHp = 400;
+            gameState.enemy.hp = config.enemy;
+            gameState.enemy.maxHp = config.enemy;
+            gameState.enemy.name = config.name;
+
+            document.getElementById('dialogue').classList.remove('active');
+            document.getElementById('combat').classList.add('active');
+
+            rhythmState.speed = gameState.difficulty === 'hard' ? 1500 : 2000;
+            updateCombatUI();
+            drawPlayerSprite('south');
+            addLog(`Battle start! vs ${config.name}!`);
+            addLog('Your turn! Press Q to attack!');
+            
+            document.addEventListener('keydown', handleCombatKey);
+            gameState.combatNextScene = config.next;
+        }
+
+        let rhythmActive = false;
+
+        function handleCombatKey(e) {
+            if (!gameState.inCombat) return;
+            const key = e.key.toLowerCase();
+
+            if (key === 'tab') {
+                e.preventDefault();
+                if (gameState.playerTurnsDefending && !parryState.holding) {
+                    parryState.holding = true;
+                    parryState.fillAmount = 0;
+                    const parryBar = document.getElementById('parryBar');
+                    parryBar.classList.add('active');
+                    const fill = document.getElementById('parryFill');
+                    fill.style.width = '0%';
+                    
+                    parryState.parryTimer = setInterval(() => {
+                        if (parryState.holding) {
+                            parryState.fillAmount += 1.9;
+                            if (parryState.fillAmount > 100) parryState.fillAmount = 100;
+                            fill.style.width = parryState.fillAmount + '%';
+                            
+                            // Visual feedback when in green zone
+                            if (parryState.fillAmount >= 37.5 && parryState.fillAmount <= 62.5) {
+                                fill.style.filter = 'drop-shadow(0 0 15px #00ff88)';
+                            } else {
+                                fill.style.filter = 'none';
+                            }
+                        }
+                    }, 20);
+                }
+                return;
+            }
+
+            if (key === 'q') {
+                if (rhythmActive || parryState.holding || gameState.playerTurnsDefending) {
+                    return;
+                } else if (gameState.player.hp > 0) {
+                    rhythmActive = true;
+                    gameState.comboCount = 1;
+                    drawPlayerSprite('south');
+                    const dmg = 8 + Math.random() * 6;
+                    gameState.enemy.hp = Math.max(0, gameState.enemy.hp - dmg);
+                    updateCombatUI();
+                    showCombatStatus(`✓ COMBO!`, 'action');
+                    addLog(`Hit! ${Math.floor(dmg)} damage`);
+                    rhythmState.speed = gameState.difficulty === 'hard' ? 1500 : 2000;
+                    promptNextKey();
+                }
+                return;
+            }
+
+            if (rhythmActive && ['w', 'e', 'r', 't', 'y', 'u'].includes(key)) {
+                if (key === rhythmState.nextKey) {
+                    clearInterval(rhythmState.timer);
+                    const parryChance = gameState.difficulty === 'hard' ? 0.35 : 0.25;
+                    if (Math.random() < parryChance) {
+                        addLog(`${gameState.enemy.name} parried!`);
+                        showCombatStatus(`PARRIED!`, 'parry');
+                        dropCombo();
+                        return;
+                    }
+                    const dmg = 8 + Math.random() * 6;
+                    gameState.enemy.hp = Math.max(0, gameState.enemy.hp - dmg);
+                    gameState.comboCount++;
+                    updateCombatUI();
+                    showCombatStatus(`HIT x${gameState.comboCount}!`, 'combo');
+                    addLog(`Hit x${gameState.comboCount}! ${Math.floor(dmg)} damage`);
+                    promptNextKey();
+                } else {
+                    dropCombo();
+                }
+            }
+
+            // E key for assist (evasion)
+            if (key === 'e') {
+                e.preventDefault();
+                if (gameState.assistCooldown <= 0 && !rhythmActive && gameState.playerTurnsDefending) {
+                    // Use assist to dodge next enemy attack
+                    gameState.assistCooldown = gameState.assistMaxCooldown;
+                    gameState.parryFailurePenalty = 0;
+                    showCombatStatus(`EVADED!`, 'action');
+                    addLog(`Used evasion! (Cooldown: ${gameState.assistMaxCooldown} turns)`);
+                    showCombatStatus(`YOUR TURN!`, 'action');
+                    updateCombatUI();
+                    // Skip this enemy turn
+                    return;
+                } else if (gameState.assistCooldown > 0) {
+                    addLog(`Assist on cooldown! (${gameState.assistCooldown} turns remaining)`);
+                } else {
+                    addLog(`Can only use assist during enemy attacks!`);
+                }
+            }
+
+            if (key === ' ') {
+                e.preventDefault();
+                if (rhythmActive) finishCombo();
+            }
+        }
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key.toLowerCase() === 'tab') {
+                e.preventDefault();
+                if (parryState.holding) {
+                    clearInterval(parryState.parryTimer);
+                    parryState.holding = false;
+                    const parryBar = document.getElementById('parryBar');
+                    parryBar.classList.remove('active');
+                    
+                    if (parryState.fillAmount >= 37.5 && parryState.fillAmount <= 62.5) {
+                        successfulParry();
+                    } else {
+                        failedParry();
+                    }
+                    parryState.fillAmount = 0;
+                    document.getElementById('parryFill').style.width = '0%';
+                }
+            }
+        });
+
+        function promptNextKey() {
+            const keys = ['w', 'e', 'r', 't', 'y', 'u'];
+            rhythmState.nextKey = keys[Math.floor(Math.random() * keys.length)];
+            rhythmState.speed = Math.max(700, rhythmState.speed - 120);
+            rhythmState.timeLeft = rhythmState.speed;
+            rhythmState.maxTime = rhythmState.speed;
+
+            // Rotate player sprite based on combo count
+            const directions = ['south', 'east', 'north', 'west'];
+            const directionIndex = (gameState.comboCount - 1) % 4;
+            drawPlayerSprite(directions[directionIndex]);
+
+            const qteBox = document.getElementById('qteBox');
+            qteBox.classList.add('active');
+            document.getElementById('qteKey').textContent = rhythmState.nextKey.toUpperCase();
+            document.getElementById('qteCount').textContent = `x${gameState.comboCount}`;
+
+            rhythmState.timer = setInterval(() => {
+                rhythmState.timeLeft -= 30;
+                const percent = Math.max(0, (rhythmState.timeLeft / rhythmState.speed) * 100);
+                const fill = document.getElementById('qteFill');
+                fill.style.width = percent + '%';
+                if (percent > 66) fill.style.background = 'linear-gradient(90deg, #00ff88, #ffdd00)';
+                else if (percent > 33) fill.style.background = 'linear-gradient(90deg, #ffdd00, #ff8800)';
+                else fill.style.background = 'linear-gradient(90deg, #ff8800, #ff0055)';
+
+                if (rhythmState.timeLeft <= 0) {
+                    clearInterval(rhythmState.timer);
+                    dropCombo();
+                }
+            }, 30);
+        }
+
+        function dropCombo() {
+            clearInterval(rhythmState.timer);
+            rhythmActive = false;
+            document.getElementById('qteBox').classList.remove('active');
+            showCombatStatus(`COMBO DROPPED!`, 'parry');
+            addLog(`Combo dropped at ${gameState.comboCount} hits!`);
+            setTimeout(enemyTurn, 1200);
+        }
+
+        function finishCombo() {
+            clearInterval(rhythmState.timer);
+            rhythmActive = false;
+            document.getElementById('qteBox').classList.remove('active');
+            showCombatStatus(`COMBO ENDED x${gameState.comboCount}!`, 'action');
+            addLog(`Combo finished: ${gameState.comboCount} hits!`);
+            setTimeout(enemyTurn, 1200);
+        }
+
+        function successfulParry() {
+            gameState.playerTurnsDefending = false;
+            showCombatStatus(`PARRIED!`, 'parry');
+            addLog(`Successful parry!`);
+            const counterDmg = 15 + Math.random() * 10;
+            gameState.enemy.hp = Math.max(0, gameState.enemy.hp - counterDmg);
+            updateCombatUI();
+            
+            if (gameState.enemy.hp <= 0) {
+                endCombat(true);
+            } else {
+                setTimeout(() => {
+                    showCombatStatus(`YOUR TURN!`, 'action');
+                }, 800);
+            }
+        }
+
+        function failedParry() {
+            gameState.playerTurnsDefending = false;
+            showCombatStatus(`PARRY FAILED!`, 'enemy');
+            const extraDmg = 40 + Math.random() * 20; // Increased punishment
+            gameState.player.hp = Math.max(0, gameState.player.hp - extraDmg);
+            gameState.parryFailurePenalty = Math.floor(extraDmg);
+            addLog(`Parry failed! Extra damage: ${gameState.parryFailurePenalty}!`);
+            updateCombatUI();
+            
+            if (gameState.player.hp <= 0) {
+                endCombat(false);
+            }
+        }
+
+        function enemyTurn() {
+            if (gameState.enemy.hp <= 0) {
+                endCombat(true);
+                return;
+            }
+
+            // Decrement assist cooldown
+            if (gameState.assistCooldown > 0) {
+                gameState.assistCooldown--;
+            }
+
+            gameState.playerTurnsDefending = true;
+            showCombatStatus(`${gameState.enemy.name.toUpperCase()} ATTACKS!`, 'enemy');
+            let assistMsg = gameState.assistCooldown > 0 ? `(Assist cooldown: ${gameState.assistCooldown} turns)` : `(E to evade)`;
+            addLog(`${gameState.enemy.name} attacks! Hold TAB to parry or ${assistMsg}`);
+            let hits = gameState.difficulty === 'hard' ? 5 : 4;
+            let hitCount = 0;
+
+            const loop = () => {
+                if (hitCount >= hits || gameState.player.hp <= 0) {
+                    gameState.playerTurnsDefending = false;
+                    setTimeout(() => {
+                        showCombatStatus(`YOUR TURN!`, 'action');
+                        addLog('Your turn! Press Q to attack!');
+                    }, 300);
+                    updateCombatUI();
+                    return;
+                }
+
+                const baseDmg = gameState.difficulty === 'hard' ? 12 : 8;
+                const dmg = baseDmg * (1 + hitCount * 0.1);
+                gameState.player.hp = Math.max(0, gameState.player.hp - dmg);
+                addLog(`${gameState.enemy.name} hits: ${Math.floor(dmg)} dmg!`);
+                updateCombatUI();
+                hitCount++;
+
+                if (gameState.player.hp <= 0) {
+                    endCombat(false);
+                } else {
+                    setTimeout(loop, 700);
+                }
+            };
+
+            setTimeout(loop, 600);
+        }
+
+        function endCombat(won) {
+            document.removeEventListener('keydown', handleCombatKey);
+            clearInterval(rhythmState.timer);
+            rhythmActive = false;
+            gameState.inCombat = false;
+
+            if (!won) {
+                alert('Defeated!');
+                location.reload();
+                return;
+            }
+
+            document.getElementById('combat').classList.remove('active');
+            document.getElementById('dialogue').classList.add('active');
+            showScene(gameState.combatNextScene);
+        }
+
+        function updateCombatUI() {
+            const pPercent = (gameState.player.hp / gameState.player.maxHp) * 100;
+            document.getElementById('playerHpFill').style.width = pPercent + '%';
+            document.getElementById('playerHpText').textContent = `${Math.ceil(gameState.player.hp)}/${gameState.player.maxHp}`;
+
+            const ePercent = (gameState.enemy.hp / gameState.enemy.maxHp) * 100;
+            document.getElementById('enemyHpFill').style.width = ePercent + '%';
+            document.getElementById('enemyHpText').textContent = `${Math.ceil(gameState.enemy.hp)}/${gameState.enemy.maxHp}`;
+
+            const log = document.getElementById('battleLog');
+            log.innerHTML = gameState.combatLog.slice(-12).map(l => `<div class="log-entry">${l}</div>`).join('');
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function addLog(text) {
+            gameState.combatLog.push(text);
+        }
+
+        function showCombatStatus(text, type = 'normal') {
+            const status = document.getElementById('combatStatus');
+            status.textContent = text;
+            status.className = `combat-status ${type}`;
+            status.style.animation = 'none';
+            setTimeout(() => {
+                status.style.animation = 'statusPop 2s ease-out forwards';
+            }, 10);
+        }
+    </script>
+</body>
+</html>
