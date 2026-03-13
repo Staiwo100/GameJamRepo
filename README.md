@@ -8,6 +8,11 @@
 **The Conqueror** is an interactive narrative-driven combat game featuring rhythm-based battle mechanics, moral choice systems, and dynamic encounters with enemies. Players guide a legendary warrior through a tale of power, honor, and survival while navigating treacherous journeys filled with unexpected Marie patrol encounters.
 
 ---
+## How to run
+
+Simply download the HTML file in the repository.
+
+---
 
 ## 🎮 How to Play
 
@@ -157,7 +162,6 @@ Your decisions throughout the game affect your honour rating (0-100):
 | **W/E/R/T/Y/U** | Continue combo (follow prompts) |
 | **SPACE** | Parry during minigame |
 | **E** | Evasion (skip enemy turn, 2-turn cooldown) |
-| **TAB** | Defensive stance (hold) |
 | **CLICK** | Select dialogue choices |
 
 ---
@@ -168,7 +172,7 @@ Your decisions throughout the game affect your honour rating (0-100):
 2. **Parry Practice** - Watch for the green zone. Timing is crucial.
 3. **Evasion Cooldown** - Don't waste evasion early. Save it for dangerous moments.
 4. **Honour Matters** - Your path affects dialogue and endings. Choose wisely.
-5. **Travel Prepared** - Stock up on confidence before long journeys!
+
 
 ---
 
@@ -188,7 +192,6 @@ Your decisions throughout the game affect your honour rating (0-100):
 - ✅ Battle log and feedback systems
 
 ### **Future Additions**
-- Prince vs Conqueror spar scene
 - Additional enemy types
 - More story content (Act 2+ expansion)
 - Sound effects and music
